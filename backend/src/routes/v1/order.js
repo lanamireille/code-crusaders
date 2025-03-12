@@ -82,8 +82,25 @@ router.delete('/sent/:orderId', authMiddleware, (req, res) => {
 // ************** RECEIVED ORDERS ************** //
 
 // GET /v1/order/received/list
-router.get('/received/list', authMiddleware, (req, res) => {
-  // replace the following with actual logic
+router.get('/received/list', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.authUserId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorised Request' });
+    }
+
+    const ublOrderDocuments = await getUserUblOrders(userId);
+
+    if (!Array.isArray(ublOrderDocuments)) {
+      return res.status(400).json({ error: 'Client error: Failed to retrieve order' });
+    }
+
+    res.status(200).json({ ublOrderDocuments });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' })
+  }
+  
   res.json({ message: 'Received orders list fetched successfully' });
 });
 
