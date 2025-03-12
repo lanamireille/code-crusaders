@@ -309,7 +309,7 @@ describe('GET /v1/order/received/list', () => {
   });
 
   test('should return an empty array if no orders exist', () => {
-    // Delete all orders for the user (assuming you have access to Supabase in your test environment)
+    // Delete all orders for the user
     // await supabase.from('order').delete().eq('userId', req.authUserId);
 
     const res = listReceivedOrdersRequest(token);
