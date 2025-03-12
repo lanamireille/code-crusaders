@@ -53,3 +53,7 @@ export const orderBulkCreateRequest = (jsonOrderList, token) => {
 export const getUserDetailsRequest = (token) => {
   return requestHelper('GET', '/v1/user/details',{},token);
 }
+
+export const listReceivedOrdersRequest = (token) => {
+  return requestHelper('GET', '/v1/order/received/list', {}, token);
+}
