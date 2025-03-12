@@ -3,7 +3,8 @@ import {
   orderBulkCreateRequest,
   orderFormCreateRequest,
   orderFormUpdateRequest,
-  registerUserRequest
+  registerUserRequest,
+  listReceivedOrdersRequest
 } from '../wrapper';
 
 const port = config.port;
@@ -284,3 +285,39 @@ describe('POST /v1/order/create/bulk', () => {
 
   test.todo('should return 401 and an error message');
 })
+
+describe('GET /v1/order/received/list', () => {
+  test('should return 200 and an array of UBL documents', () => {
+    const res = listReceivedOrdersRequest(token);
+    const body = JSON.parse(res.getBody('utf8'));
+
+    expect(res.statusCode).toBe(200);
+    expect(body).toHaveProperty('ublOrderDocuments');
+    expect(Array.isArray(body.ublOrderDocuments)).toBe(true);
+    expect(body.ublOrderDocuments.length).toBeGreaterThanOrEqual(1); // At least one order exists
+    expect(typeof body.ublOrderDocuments[0]).toBe('string'); // Each document is a string
+  });
+
+  test('should return 401 for unauthorized requests', () => {
+    const invalidToken = 'invalid-token';
+    const res = listReceivedOrdersRequest(invalidToken);
+    const body = JSON.parse(res.getBody('utf8'));
+
+    expect(res.statusCode).toBe(401);
+    expect(body).toHaveProperty('error');
+    expect(typeof body.error).toBe('string');
+  });
+
+  test('should return an empty array if no orders exist', () => {
+    // Delete all orders for the user (assuming you have access to Supabase in your test environment)
+    // await supabase.from('order').delete().eq('userId', req.authUserId);
+
+    const res = listReceivedOrdersRequest(token);
+    const body = JSON.parse(res.getBody('utf8'));
+
+    expect(res.statusCode).toBe(200);
+    expect(body).toHaveProperty('ublOrderDocuments');
+    expect(Array.isArray(body.ublOrderDocuments)).toBe(true);
+    expect(body.ublOrderDocuments.length).toBe(0); // No orders exist
+  });
+});
