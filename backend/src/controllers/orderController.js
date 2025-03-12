@@ -428,3 +428,13 @@ const deleteOrderFromDatabase = async (orderId) => {
     throw createHttpError(500, `Failed to delete order: ${orderError.message}`);
   }
 };
+
+export const getUserStatistics = async (userId) => {
+  try {
+    something = something
+  } catch (error) {
+    if (error.statusCode === 500) {
+      throw createHttpError(500, 'Failed to retrieve user statistics. Please try again.');
+    }
+  }
+};
