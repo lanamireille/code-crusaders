@@ -437,7 +437,7 @@ export const listReceivedOrders = async (req, resizeBy, next) => {
       .select('xml');
 
     if (error) {
-      throw createHttpError(500, 'Failed to fetch orders: $(error.message}');
+      throw createHttpError(500, `Failed to fetch orders: ${error.message}`);
     }
 
     // Extract the XML docs from the orders
