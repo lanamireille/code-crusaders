@@ -1,6 +1,6 @@
 import express, { json } from 'express';
 import authMiddleware from '../../middleware/authMiddleware.js';
-import { orderFormCreate, orderFormUpdate, isOrderIdValid } from '../../controllers/orderController.js';
+import { orderFormCreate, orderFormUpdate, isOrderIdValid, getUserUblOrders } from '../../controllers/orderController.js';
 import orderSchema from '../../schemas/orderSchema.js';
 const router = express.Router();
 
@@ -86,21 +86,25 @@ router.get('/received/list', authMiddleware, async (req, res) => {
   try {
     const userId = req.authUserId;
 
+    // Ensures that userId is set
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorised Request' });
     }
 
+    // Fetches the user's UBL orders
     const ublOrderDocuments = await getUserUblOrders(userId);
 
+    // Ensures the result is an array
     if (!Array.isArray(ublOrderDocuments)) {
-      return res.status(400).json({ error: 'Client error: Failed to retrieve order' });
+      return res.status(500).json({ error: 'Failed to retrieve orders: Invalid data format' });
     }
 
+    // Return the UBL docs
     res.status(200).json({ ublOrderDocuments });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' })
   }
-  
+
   res.json({ message: 'Received orders list fetched successfully' });
 });
 

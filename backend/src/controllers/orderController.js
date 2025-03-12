@@ -428,3 +428,41 @@ const deleteOrderFromDatabase = async (orderId) => {
     throw createHttpError(500, `Failed to delete order: ${orderError.message}`);
   }
 };
+
+export const listReceivedOrders = async (req, resizeBy, next) => {
+  try {
+    // Fetch all orders from database
+    const { data: orders, error } = await supabase
+      .from('order')
+      .select('xml');
+
+    if (error) {
+      throw createHttpError(500, 'Failed to fetch orders: $(error.message}');
+    }
+
+    // Extract the XML docs from the orders
+    const ublOrderDocuments = orders.map(order => order.xml);
+
+    // Return the XML docs in an array
+    res.status(200).json({ ublOrderDocuments });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserUblOrders = async (userId) => {
+  try {
+    const { data: orders, error } = await supabase
+      .from('order')
+      .select('xml')
+      .eq('userId', userId);
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return orders.map(order => order.xml);
+  } catch (error) {
+    throw error; // Re-throws error to be handled by the routing
+  }
+};
