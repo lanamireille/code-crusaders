@@ -1,0 +1,1015 @@
+openapi: 3.0.0
+info: 
+  title: Order Creation API Documentation
+  description: Outlines all the routes in our order creation API
+  version: 1.0.0
+
+paths:
+  /v1/order/create/form:
+    post:
+      summary: Creates an order form for a user
+      description: Creates a standardized 2.1 UBL Order document based on user input from a manual form submission
+      tags:
+      - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/formParams'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId:
+                    type: integer
+                    example: 12345
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/create/bulk:
+    post:
+      summary: Create multiple orders in bulk
+      description: Accepts an array of order document data and creates multiple orders.
+      tags:
+        - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orders:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/formParams'
+              required:
+                - orders
+      responses:
+        '200':
+          description: Orders created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderIds:
+                    type: array
+                    items:
+                      type: integer
+                      example: 1242
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/create/pdf:
+    post:
+      summary: Creates a pdf version of an order created
+      description: Creates a standardised 2.1 UBL Order document based on data provided in a PDF file
+      tags:
+      - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pdfFile:
+                  type: string
+                  description: PDF file being uploaded
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId:
+                    type: integer
+                    example: 12345
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/list:
+    get:
+      summary: Lists the orders of the user
+      description: Lists all of the users UBL Order documents generated
+      tags:
+      - Order
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: [ "order1", "order2", "order3" ]
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/{orderId}:
+    get:
+      summary: Gets a specific order of a user
+      description: Gets a particular UBL Order Document
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          description: ID of the particular document
+          schema:
+            type: integer
+      responses:
+        200: 
+          description: OK
+          content:
+            application/xml:
+              schema:
+                type: string
+                example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Order xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Order-2\">\n  <OrderID>12345</OrderID>\n  <OrderDate>2025-03-10</OrderDate>\n  <!-- other XML content -->\n</Order>"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+  
+    put:
+      summary: Updates the information of an order
+      description: Update information on a UBL Order Document
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          description: ID of the particular document to update
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/formParams'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+    delete:
+      summary: Deletes a UBL Order Document
+      description: Deletes a particular UBL Order Document identified by orderId
+      tags:
+        - Order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          description: ID of the particular document to be deleted
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+
+  /v1/user/register:
+    post:
+      summary: Register a new user
+      description: Registers a new user and returns a session token if successful
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "Password123"
+                nameFirst:
+                  type: string
+                  example: "John"
+                nameLast:
+                  type: string
+                  example: "Smith"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "1t2nb34"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/user/login:
+    post:
+      summary: Login a user
+      description: Logs in a user and returns a session token if successful
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "Password123"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "1t2nb34"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/user/logout:
+    post:
+      summary: Logout a user
+      description: Logs out the current user, invalidating their session token
+      tags:
+        - User
+      parameters:
+        - name: token
+          in: header
+          description: user’s current session token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/user/statistics:
+    get:
+      summary: Returns a user's order statistics
+      description: Retrieves statistics to display on the user's dashboard
+      tags:
+        - User
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatistics'
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/received/{orderId}:
+    delete:
+      summary: Deletes a received order
+      description: Deletes a received UBL document from the user's inbox. The sender can still view it.
+      tags:
+        - Order
+      parameters:
+        - name: orderId
+          in: path
+          description: Order id to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/received/list:
+    get:
+      summary: Lists user's received orders
+      description: Lists all of the user's received UBL documents
+      tags:
+        - Order
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: [ "order1", "order2", "order3" ]
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/sent/{orderId}:
+    delete:
+      summary: Unsends an order
+      description: Deletes (unsends) a sent UBL document
+      tags:
+        - Order
+      parameters: 
+        - name: orderId
+          in: path
+          description: Order id to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/sent/list:
+    get:
+      summary: Lists user's sent orders
+      description: Lists all of the user’s sent UBL documents
+      tags:
+        - Order
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: [ "order1", "order2", "order3" ]
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+  
+  /v1/order/send:
+    post:
+      summary: Sends an order
+      description: Sends a UBL order document 
+      tags:
+        - Order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "receiver@example.com"
+                orderId:
+                  type: string
+                  example: "12345"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/order/{orderId}/pdf:
+    get:
+      summary: Gets PDF copy of order
+      description: Gets the PDF version of a UBL Order document
+      tags:
+      - Order
+      parameters: 
+        - name: orderId
+          in: path
+          description: Order id to generate a PDF copy
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                example: 
+                  pdfLink: "https://example.com/files/sample.pdf"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+  
+  /v1/user/details:
+    put:
+      summary: Updates a user's details
+      description: Updates the details of the current user
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                  example: "John"
+                lastName:
+                  type: string
+                  example: "Smith"
+                password:
+                  type: string
+                  example: "Password123"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+    get: 
+      summary: Gets a users details
+      description: Get the details of the current user
+      tags:
+        - User
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  firstName:
+                    type: string
+                    example: "John"
+                  lastName:
+                    type: string
+                    example: "Smith"
+                  password:
+                    type: string
+                    example: "Password123"
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/user/reset:
+    post:
+      summary: Reset a user's password
+      description: Allows a user to reset their password
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                  example: 1234
+                newPassword:
+                  type: string
+                  example: "Password123"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+  /v1/user/forgot:
+    post:
+      summary: Sends code for password reset
+      description: Allows a user to reset their password
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          $ref: "#/components/responses/BadRequestResponse"
+        401:
+          $ref: "#/components/responses/UnauthorizedResponse"
+
+components:
+  responses:
+    BadRequestResponse:
+      description: Client error, bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              error: "Client error, bad request"
+    UnauthorizedResponse:
+      description: Unauthorized request
+      content:
+        application/json:
+          schema:
+            type: object
+            example:
+              error: "Unauthorized request"
+  schemas:
+    OrderStatistics:
+      type: object
+      properties:
+        topThreeItems:
+          type: array
+          items:
+            type: string
+        numOrdersMonthly:
+          type: array
+          items:
+            type: integer
+        totalOrders:
+          type: integer
+        totalAmountMonth:
+          type: number
+          format: float
+      example:
+        topThreeItems: ["item1", "item2", "item3"]
+        numOrdersMonthly: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65]
+        totalOrders: 1000
+        totalAmountMonth: 2500.75
+
+    formParams:
+      type: object
+      required:
+        - order
+        - buyer
+        - seller
+        - delivery
+        - monetaryTotal
+        - orderLines
+      properties:
+        order:
+          type: object
+          properties:
+            note:
+              type: string
+              example: "Order note string"
+            documentCurrencyCode:
+              type: string
+              example: "AUD"
+            accountingCostCode:
+              type: string
+              example: "ACC-2024-001"
+            validityEndDate:
+              type: string
+              format: date
+              example: "2025-12-31"
+            quotationDocumentReferenceId:
+              type: string
+              example: "QDR-456789"
+            orderDocumentReferenceId:
+              type: string
+              example: "ORD-987654"
+            originatorDocumentReferenceId:
+              type: string
+              example: "ORG-123456"
+            contractType:
+              type: string
+              example: "Service Agreement"
+            contractId:
+              type: integer
+              example: 20240501
+        buyer:
+          type: object
+          properties:
+            buyerId:
+              type: string
+              minLength: 13
+              maxLength: 13
+              example: "1234567890123"
+            name:
+              type: string
+              example: "Buyer Name"
+            postalAddress:
+              type: object
+              required:
+                - postBox
+                - streetName
+                - buildingNumber
+                - department
+                - cityName
+                - postalZone
+                - countrySubentity
+                - countryCode
+              properties:
+                postBox: 
+                  type: string
+                  example: "PO box 123"
+                streetName: 
+                  type: string
+                  example: "Example street"
+                additionalStreetName: 
+                  type: string 
+                  example: "Additional example"
+                buildingNumber: 
+                  type: string
+                  example: "45A"
+                department:
+                  type: string 
+                  example: "Sales"
+                cityName: 
+                  type: string 
+                  example: "Sydney"
+                postalZone: 
+                  type: string 
+                  example: "2000"
+                countrySubentity: 
+                  type: string 
+                  example: "SYD"
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  example: "AU"
+            taxScheme:
+              type: string
+              example: "VAT"
+            contact:
+              type: object
+              required:
+                - telephone
+                - email
+              properties:
+                telephone: 
+                  type: string 
+                  example: "+61 412 345 678"
+                telefax: 
+                  type: string 
+                  example: "+61 412 345 678"
+                email: 
+                  type: string
+                  format: email
+                  example: "buyer@example.com"
+            person:
+              type: object
+              required:
+                - firstName
+                - familyName
+                - jobTitle
+              properties:
+                firstName:
+                  type: string
+                  example: "John"
+                middleName: 
+                  type: string 
+                  example: "Adam"
+                familyName: 
+                  type: string
+                  example: "Smith"
+                jobTitle: 
+                  type: string
+                  example: "Example Manager"
+        seller:
+          type: object
+          properties:
+            sellerId:
+              type: string
+              minLength: 13
+              maxLength: 13
+              example: "1234567890123"
+            name:
+              type: string
+              example: "Seller Name"
+            postalAddress:
+              type: object
+              required:
+                - postBox
+                - streetName
+                - buildingNumber
+                - department
+                - cityName
+                - postalZone
+                - countrySubentity
+                - countryCode
+              properties:
+                postBox: 
+                  type: string
+                  example: "PO box 123"
+                streetName: 
+                  type: string
+                  example: "Example street"
+                additionalStreetName: 
+                  type: string 
+                  example: "Additional example"
+                buildingNumber: 
+                  type: string
+                  example: "45A"
+                department:
+                  type: string 
+                  example: "Sales"
+                cityName: 
+                  type: string 
+                  example: "Sydney"
+                postalZone: 
+                  type: string 
+                  example: "2000"
+                countrySubentity: 
+                  type: string 
+                  example: "SYD"
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  example: "AU"
+            contact:
+              type: object
+              required:
+                - telephone
+                - email
+              properties:
+                telephone: 
+                  type: string 
+                  example: "+61 412 345 678"
+                telefax: 
+                  type: string 
+                  example: "+61 412 345 678"
+                email: 
+                  type: string
+                  format: email
+                  example: "seller@example.com"
+            person:
+              type: object
+              required:
+                - firstName
+                - familyName
+                - jobTitle
+              properties:
+                firstName:
+                  type: string
+                  example: "John"
+                middleName: 
+                  type: string 
+                  example: "Adam"
+                familyName: 
+                  type: string
+                  example: "Smith"
+                jobTitle: 
+                  type: string
+                  example: "Example Manager"
+        delivery:
+          type: object
+          properties:
+            deliveryAddress:
+              type: object
+              properties:
+                postBox: 
+                  type: string
+                  example: "PO box 123"
+                streetName: 
+                  type: string
+                  example: "Example street"
+                additionalStreetName: 
+                  type: string 
+                  example: "Additional example"
+                buildingNumber: 
+                  type: string
+                  example: "45A"
+                department:
+                  type: string 
+                  example: "Sales"
+                cityName: 
+                  type: string 
+                  example: "Sydney"
+                postalZone: 
+                  type: string 
+                  example: "2000"
+                countrySubentity: 
+                  type: string 
+                  example: "SYD"
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  example: "AU"
+            requestedDeliveryPeriod:
+              type: object
+              properties:
+                startDate: 
+                  type: string
+                  format: date
+                endDate: 
+                  type: string
+                  format: date
+            deliveryParty:
+              type: object
+              properties:
+                deliveryPartyId: 
+                  type: integer
+                  example: 12345
+                name: 
+                  type: string 
+                  example: "Delivery Party Name"
+                telephone: 
+                  type: string
+                  example: "1300 123 456"
+                email: 
+                  type: string
+                  format: email
+                  example: "delivertparty@example.com"
+                telefax: 
+                  type: string 
+                  example: "1300 123 456"
+
+        monetaryTotal:
+          type: object
+          properties:
+            lineExtensionAmount: 
+              type: number 
+              example: 1500.00
+            taxTotal: 
+              type: number 
+              example: 300.00
+            allowanceCharge:
+              type: array
+              items:
+                type: object
+                properties:
+                  chargeIndicator: 
+                    type: boolean 
+                    example: true
+                  allowanceChargeReason: 
+                    type: string 
+                    example: "Example discount"
+                  amount: 
+                    type: number 
+                    example: 50.00
+        orderLines:
+          type: array
+          items:
+            type: object
+            properties:
+              note: 
+                type: string 
+                example: "Order note string"
+              lineItem:
+                type: object
+                properties:
+                  quantity: 
+                    type: number 
+                    example: 10
+                  totalTaxAmount: 
+                    type: number 
+                    example: 75.00
+                  price: 
+                    type: number 
+                    example: 15.00
+                  baseQuantity:
+                    type: object
+                    properties:
+                      quantity: 
+                        type: number 
+                        example: 1
+                      unitCode: 
+                        type: string 
+                        example: "unit123"
+                  item:
+                    type: object
+                    properties:
+                      itemId: 
+                        type: integer 
+                        example: 12345
+                      description: 
+                        type: string 
+                        example: "Example item description"
+                      name: 
+                        type: string 
+                        example: "Example item name"
+                      properties:
+                        type: object
+                        additionalProperties:
+                          type: string
+                        example: 
+                          "Color": "Black"
+
+        additionalDocumentReference:
+          type: array
+          items:
+            type: object
+            required:
+              - documentType
+              - attachment
+            properties:
+              documentType: 
+                type: string 
+                example: "Example document"
+              attachment:
+                type: object
+                properties:
+                  uri: 
+                    type: string
+                    format: uri
+                    example: "https://example.com/document.pdf"
+                  binaryObject:
+                    type: string 
+                    example: "QmFzZTY0RW5jb2RlZFN0cmluZw=="
+                  mimeCode: 
+                    type: string 
+                    example: "application/pdf"
