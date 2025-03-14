@@ -5,7 +5,8 @@ import {
   loginUserRequest,
   logoutUserRequest,
   getUserDetailsRequest,
-  sendUserResetCodeRequest
+  sendUserResetCodeRequest,
+  getUserStatisticsRequest
 } from '../wrapper';
 
 // constants
@@ -341,5 +342,95 @@ describe('POST /v1/user/forgot', () => {
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty('error');
     expect(typeof res.body.error).toBe('string');
+  });
+});
+
+describe('GET /v1/user/statistics', () => {
+  let token;
+  const email = 'statistics@example.com';
+
+  beforeEach(async () => {
+    // Register a user and log in to get a token
+    await deleteUserFromDB(email); // Ensures user is removed from database before registering
+    const res = await registerUserRequest(email, password, nameFirst, nameLast);
+    token = res.body.token;
+  });
+
+  afterEach(async () => {
+    // Clean up by deleting the user
+    await deleteUserFromDB(email);
+  });
+
+  test('Successfully retrieves user statistics and returns 200', async () => {
+    // Mock orders data in Supabase for the user
+    const orders = [
+      {
+        user_email: email,
+        items: [{ name: 'Item A' }, { name: 'Item B' }, { name: 'Item A' }],
+        order_date: new Date().toISOString(),
+        total_amount: 100.0,
+      },
+      {
+        user_email: email,
+        items: [{ name: 'Item B' }, { name: 'Item C' }],
+        order_date: new Date().toISOString(),
+        total_amount: 200.0,
+      },
+      {
+        user_email: email,
+        items: [{ name: 'Item A' }, { name: 'Item C' }],
+        order_date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
+        total_amount: 150.0,
+      },
+    ];
+
+    // Insert mock orders into the database
+    const { error: insertError } = await supabase.from('orders').insert(orders);
+    expect(insertError).toBeNull();
+
+    // Call the endpoint
+    const res = await getUserStatisticsRequest(token);
+    const body = res.body;
+
+    // Assert the response
+    expect(res.statusCode).toBe(200);
+    expect(body).toHaveProperty('topThreeItems');
+    expect(body).toHaveProperty('numOrdersMonthly');
+    expect(body).toHaveProperty('totalOrders');
+    expect(body).toHaveProperty('totalAmountMonth');
+
+    // Verify the statistics
+    expect(body.topThreeItems).toEqual(['Item A', 'Item B', 'Item C']);
+    expect(body.numOrdersMonthly).toHaveLength(12);
+    expect(body.totalOrders).toBe(3);
+    expect(body.totalAmountMonth).toBe(300.0); // Sum of orders in the current month
+  });
+
+  test('No orders found, returns default statistics', async () => {
+    // Call the endpoint
+    const res = await getUserStatisticsRequest(token);
+    const body = res.body;
+
+    // Assert the response
+    expect(res.statusCode).toBe(200);
+    expect(body).toHaveProperty('topThreeItems');
+    expect(body).toHaveProperty('numOrdersMonthly');
+    expect(body).toHaveProperty('totalOrders');
+    expect(body).toHaveProperty('totalAmountMonth');
+
+    // Verify default values
+    expect(body.topThreeItems).toEqual([]);
+    expect(body.numOrdersMonthly).toEqual(new Array(12).fill(0));
+    expect(body.totalOrders).toBe(0);
+    expect(body.totalAmountMonth).toBe(0.0);
+  });
+
+  test('Invalid token, returns 401', async () => {
+    const res = await getUserStatisticsRequest('invalidToken');
+    const body = res.body;
+
+    // Assert the response
+    expect(res.statusCode).toBe(401);
+    expect(body).toHaveProperty('error', 'Invalid token');
   });
 });
