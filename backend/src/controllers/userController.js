@@ -383,3 +383,90 @@ const htmlEmailContent = (name, resetCode) => {
   </html>
   `;
 };
+
+/**
+ * Retrieves statistics about a user's top three items, number of orders per month, total number of orders,
+ * and total amount of money spent per month
+ * 
+ * @param {string} token - The authentication token of the user
+ * @returns {topThreeItems: string[], numOrdersMonthly: number[], totalOrders: number, totalAmountMonth: number}
+ */
+export const getUserStatistics = async (email) => {
+  try {
+    // Fetch all orders associated with the user's email
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_email', email);
+
+    if (ordersError) {
+      throw createHttpError(500, `Failed to fetch user orders: ${ordersError.message}`);
+    }
+
+    if (!orders || orders.length === 0) {
+      return {
+        topThreeItems: [],
+        numOrdersMonthly: new Array(12).fill(0),
+        totalOrders: 0,
+        totalAmountMonth: 0.0,
+      };
+    }
+
+    // Calculate statistics
+
+    // Top Three Items
+    const itemFrequency = {};
+    orders.forEach((order) => {
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach((item) => {
+          if (item.name) {
+            itemFrequency[item.name] = (itemFrequency[item.name] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    const topThreeItems = Object.entries(itemFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([itemName]) => itemName);
+
+    // Number of Orders Monthly (past 12 months)
+    const numOrdersMonthly = new Array(12).fill(0);
+    const currentDate = new Date();
+    orders.forEach((order) => {
+      const orderDate = new Date(order.order_date);
+      const monthDiff = (currentDate.getFullYear() - orderDate.getFullYear()) * 12 + (currentDate.getMonth() - orderDate.getMonth());
+      if (monthDiff >= 0 && monthDiff < 12) {
+        numOrdersMonthly[11 - monthDiff]++;
+      }
+    });
+
+    // Total Orders
+    const totalOrders = orders.length;
+
+    // Total Amount for the Month
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const totalAmountMonth = orders
+      .filter((order) => {
+        const orderDate = new Date(order.order_date);
+        return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+      })
+      .reduce((total, order) => total + (order.total_amount || 0), 0);
+
+    // Return the statistics
+    return {
+      topThreeItems,
+      numOrdersMonthly,
+      totalOrders,
+      totalAmountMonth,
+    };
+
+  } catch (error) {
+    if (!error.status) {
+      throw createHttpError(500, 'Unexpected server error: ' + error.message);
+    }
+    throw error;
+  }
+};
