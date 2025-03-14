@@ -5,10 +5,10 @@ import {
   loginUser,
   logoutUser,
   getUserDetails,
-  sendUserResetCode
+  sendUserResetCode,
+  getUserStatistics
 } from '../../controllers/userController.js';
 import cookieParser from 'cookie-parser';
-import { getUserStatisticsRequest } from '../../tests/wrapper.js';
 
 // cookies omnom
 const app = express();
@@ -117,6 +117,7 @@ router.put('/details', authMiddleware, (req, res) => {
 
 // GET /v1/user/statistics
 router.get('/statistics', authMiddleware, async (req, res) => {
+  console.log(`Request received with email ${req.user.email}`);
   try {
     const email = req.user.email;
     const statistics = await getUserStatistics(email);
@@ -124,7 +125,6 @@ router.get('/statistics', authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(error.status || 500).json({ message: error.message });
   }
-  res.json({ message: 'User statistics fetched successfully' });
 });
 
 export default router;

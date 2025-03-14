@@ -349,46 +349,56 @@ describe('GET /v1/user/statistics', () => {
   let token;
   const email = 'statistics@example.com';
 
+  const orders = [
+    {
+      orderId: 1,
+      creator: 'statistics@example.com',
+      cost: 100.0,
+      order_date: new Date().toISOString(),
+    },
+    {
+      orderId: 2,
+      creator: 'statistics@example.com',
+      cost: 200.0,
+      order_date: new Date().toISOString(),
+    },
+  ];
+
+  const orderProducts = [
+    { orderId: 1, productId: 1, quantity: 2 },
+    { orderId: 1, productId: 2, quantity: 1 },
+    { orderId: 2, productId: 2, quantity: 3 },
+  ];
+
+  const products = [
+    { productId: 1, name: 'Item A' },
+    { productId: 2, name: 'Item B' },
+  ];
+
   beforeEach(async () => {
     // Register a user and log in to get a token
-    await deleteUserFromDB(email); // Ensures user is removed from database before registering
+    await deleteUserFromDB(email); // Ensure that users are removed before registering
     const res = await registerUserRequest(email, password, nameFirst, nameLast);
     token = res.body.token;
+
+    // Insert mock data into the database
+    await supabase.from('registeredOrder').insert(orders);
+    await supabase.from('registeredOrderProduct').insert(orderProducts);
+    await supabase.from('product').insert(products);
+
+    // Ensures new data is properly processed by Supabase
+    await new Promise((resolve) => setTimeout(resolve, 500));
   });
 
   afterEach(async () => {
-    // Clean up by deleting the user
+    // Clean up by deleting the user and mock data
+    await supabase.from('registeredOrder').delete().in('orderId', orders.map((o) => o.orderId));
+    await supabase.from('registeredOrderProduct').delete().in('orderId', orders.map((o) => o.orderId));
+    await supabase.from('product').delete().in('productId', products.map((p) => p.productId));
     await deleteUserFromDB(email);
   });
 
   test('Successfully retrieves user statistics and returns 200', async () => {
-    // Mock orders data in Supabase for the user
-    const orders = [
-      {
-        user_email: email,
-        items: [{ name: 'Item A' }, { name: 'Item B' }, { name: 'Item A' }],
-        order_date: new Date().toISOString(),
-        total_amount: 100.0,
-      },
-      {
-        user_email: email,
-        items: [{ name: 'Item B' }, { name: 'Item C' }],
-        order_date: new Date().toISOString(),
-        total_amount: 200.0,
-      },
-      {
-        user_email: email,
-        items: [{ name: 'Item A' }, { name: 'Item C' }],
-        order_date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-        total_amount: 150.0,
-      },
-    ];
-
-    // Insert mock orders into the database
-    const { error: insertError } = await supabase.from('registeredOrder').insert(orders);
-    expect(insertError).toBeNull();
-
-    // Call the endpoint
     const res = await getUserStatisticsRequest(token);
     const body = res.body;
 
@@ -400,14 +410,16 @@ describe('GET /v1/user/statistics', () => {
     expect(body).toHaveProperty('totalAmountMonth');
 
     // Verify the statistics
-    expect(body.topThreeItems).toEqual(['Item A', 'Item B', 'Item C']);
+    expect(body.topThreeItems).toEqual(['Item B', 'Item A']); // Item B has higher quantity
     expect(body.numOrdersMonthly).toHaveLength(12);
-    expect(body.totalOrders).toBe(3);
+    expect(body.totalOrders).toBe(2);
     expect(body.totalAmountMonth).toBe(300.0); // Sum of orders in the current month
   });
 
   test('No orders found, returns default statistics', async () => {
-    // Call the endpoint
+    // Delete all orders for the user
+    await supabase.from('registeredOrder').delete().eq('creator', email);
+
     const res = await getUserStatisticsRequest(token);
     const body = res.body;
 

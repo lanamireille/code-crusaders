@@ -387,22 +387,22 @@ const htmlEmailContent = (name, resetCode) => {
 /**
  * Retrieves statistics about a user's top three items, number of orders per month, total number of orders,
  * and total amount of money spent per month
- * 
+ *
  * @param {string} token - The authentication token of the user
  * @returns {topThreeItems: string[], numOrdersMonthly: number[], totalOrders: number, totalAmountMonth: number}
  */
 export const getUserStatistics = async (email) => {
   try {
-    // Fetch all orders associated with the user's email
+    // Fetch all orders for the user
     const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('user_email', email);
+      .from('registeredOrder')
+      .select('orderId, cost, order_date')
+      .eq('creator', email);
 
-    if (ordersError) {
+    if (!orders || ordersError) {
       throw createHttpError(500, `Failed to fetch user orders: ${ordersError.message}`);
     }
-
+    // If there are no orders, give values of 0 for all areas
     if (!orders || orders.length === 0) {
       return {
         topThreeItems: [],
@@ -412,17 +412,42 @@ export const getUserStatistics = async (email) => {
       };
     }
 
+    // Fetch products for each order
+    const orderIds = orders.map((order) => order.orderId);
+    const { data: orderProducts, error: orderProductsError } = await supabase
+      .from('registeredOrderProduct')
+      .select('orderId, productId, quantity')
+      .in('orderId', orderIds);
+
+    if (orderProductsError) {
+      throw createHttpError(500, `Failed to fetch order products: ${orderProductsError.message}`);
+    }
+
+    // Fetch product details
+    const productIds = orderProducts.map((op) => op.productId);
+    const { data: products, error: productsError } = await supabase
+      .from('product')
+      .select('productId, name')
+      .in('productId', productIds);
+
+    if (productsError) {
+      throw createHttpError(500, `Failed to fetch product details: ${productsError.message}`);
+    }
+
     // Calculate statistics
 
-    // Top Three Items
+    // Map productId to product name
+    const productIdToName = {};
+    products.forEach((product) => {
+      productIdToName[product.productId] = product.name;
+    });
+
+    // Calculate top three items
     const itemFrequency = {};
-    orders.forEach((order) => {
-      if (order.items && Array.isArray(order.items)) {
-        order.items.forEach((item) => {
-          if (item.name) {
-            itemFrequency[item.name] = (itemFrequency[item.name] || 0) + 1;
-          }
-        });
+    orderProducts.forEach((op) => {
+      const productName = productIdToName[op.productId];
+      if (productName) {
+        itemFrequency[productName] = (itemFrequency[productName] || 0) + op.quantity;
       }
     });
 
@@ -431,7 +456,7 @@ export const getUserStatistics = async (email) => {
       .slice(0, 3)
       .map(([itemName]) => itemName);
 
-    // Number of Orders Monthly (past 12 months)
+    // Calculate number of orders per month (past 12 months)
     const numOrdersMonthly = new Array(12).fill(0);
     const currentDate = new Date();
     orders.forEach((order) => {
@@ -442,10 +467,10 @@ export const getUserStatistics = async (email) => {
       }
     });
 
-    // Total Orders
+    // Calculate total orders
     const totalOrders = orders.length;
 
-    // Total Amount for the Month
+    // Calculate total amount for the month
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
     const totalAmountMonth = orders
@@ -453,7 +478,7 @@ export const getUserStatistics = async (email) => {
         const orderDate = new Date(order.order_date);
         return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
       })
-      .reduce((total, order) => total + (order.total_amount || 0), 0);
+      .reduce((total, order) => total + (order.cost || 0), 0);
 
     // Return the statistics
     return {
@@ -462,7 +487,6 @@ export const getUserStatistics = async (email) => {
       totalOrders,
       totalAmountMonth,
     };
-
   } catch (error) {
     if (!error.status) {
       throw createHttpError(500, 'Unexpected server error: ' + error.message);
