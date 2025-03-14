@@ -385,7 +385,7 @@ describe('GET /v1/user/statistics', () => {
     ];
 
     // Insert mock orders into the database
-    const { error: insertError } = await supabase.from('orders').insert(orders);
+    const { error: insertError } = await supabase.from('registeredOrder').insert(orders);
     expect(insertError).toBeNull();
 
     // Call the endpoint
