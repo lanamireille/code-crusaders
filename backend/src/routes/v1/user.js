@@ -8,6 +8,7 @@ import {
   sendUserResetCode
 } from '../../controllers/userController.js';
 import cookieParser from 'cookie-parser';
+import { getUserStatisticsRequest } from '../../tests/wrapper.js';
 
 // cookies omnom
 const app = express();
@@ -115,8 +116,14 @@ router.put('/details', authMiddleware, (req, res) => {
 });
 
 // GET /v1/user/statistics
-router.get('/statistics', authMiddleware, (req, res) => {
-  // replace the following with actual logic
+router.get('/statistics', authMiddleware, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const statistics = await getUserStatistics(email);
+    res.status(200).json(statistics);
+  } catch (error) {
+    res.status(error.status || 500).json({ message: error.message });
+  }
   res.json({ message: 'User statistics fetched successfully' });
 });
 
