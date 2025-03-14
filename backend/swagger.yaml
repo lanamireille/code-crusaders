@@ -70,24 +70,27 @@ paths:
         401:
           $ref: "#/components/responses/UnauthorizedResponse"
 
-  /v1/order/create/pdf:
+  /v1/order/create/csv:
     post:
-      summary: Creates a pdf version of an order created
-      description: Creates a standardised 2.1 UBL Order document based on data provided in a PDF file
+      summary: Create an order from a CSV file
+      description: Upload a CSV file and JSON payload to create an order.
       tags:
-      - Order
+        - Order
       requestBody:
-        required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
-                pdfFile:
+                file:
                   type: string
-                  description: PDF file being uploaded
+                  format: binary
+                  description: The CSV file containing order details.
+                json:
+                  type: string
+                  description: JSON payload with additional order information.
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -140,13 +143,10 @@ paths:
         200: 
           description: OK
           content:
-            application/json:
+            application/xml:
               schema:
-                type: object
-                properties:
-                  ublDocument: 
-                    type: string
-                    example: "<Invoice><ID>12345</ID><CustomerName>John Smith</CustomerName></Invoice>"
+                type: string
+                example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Order xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Order-2\">\n  <OrderID>12345</OrderID>\n  <OrderDate>2025-03-10</OrderDate>\n  <!-- other XML content -->\n</Order>"
         400:
           $ref: "#/components/responses/BadRequestResponse"
         401:
@@ -524,15 +524,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  firstName:
+                  email:
+                    type: string
+                    example: "john@example.com"
+                  nameFirest:
                     type: string
                     example: "John"
-                  lastName:
+                  nameLast:
                     type: string
                     example: "Smith"
-                  password:
-                    type: string
-                    example: "Password123"
         400:
           $ref: "#/components/responses/BadRequestResponse"
         401:
@@ -571,7 +571,7 @@ paths:
 
   /v1/user/forgot:
     post:
-      summary: Sends code for password reset
+      summary: Sends code for password reset via email and return object
       description: Allows a user to reset their password
       tags:
         - User
@@ -593,6 +593,10 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  resetCode:
+                    type: string
+                    example: "h8d3hf6z"
         400:
           $ref: "#/components/responses/BadRequestResponse"
         401:

@@ -1,20 +1,21 @@
 import supabase from '../../config/db.js';
-import { 
+import {
+  deleteUserFromDB,
   registerUserRequest,
   loginUserRequest,
   logoutUserRequest,
-  getUserDetailsRequest
+  getUserDetailsRequest,
+  sendUserResetCodeRequest
 } from '../wrapper';
-import { deleteUserFromDB } from './order.test.js';
 
 // constants
-const password = 'password123';
+const password = 'Password123!';
 const nameFirst = 'John';
 const nameLast = 'Doe';
 
 describe('POST /v1/user/register route', () => {
   test('success, registers user and returns 200 and token', async () => {
-    const email1 = 'test1@example.com'
+    const email1 = 'test1@example.com';
     const res = await registerUserRequest(email1, password, nameFirst, nameLast);
     const body = res.body;
 
@@ -28,20 +29,20 @@ describe('POST /v1/user/register route', () => {
       .eq('email', email1)
       .single();
 
-    expect(error).toBeNull();  
+    expect(error).toBeNull();
     expect(data).not.toBeNull();
-    expect(data.email).toBe(email1);  
-    expect(data.nameFirst).toBe(nameFirst); 
-    expect(data.nameLast).toBe(nameLast); 
+    expect(data.email).toBe(email1);
+    expect(data.nameFirst).toBe(nameFirst);
+    expect(data.nameLast).toBe(nameLast);
 
     // verify the Set-Cookie header
     const setCookieHeader = res.headers['set-cookie'];
     expect(setCookieHeader).toBeDefined();
-    expect(setCookieHeader[0]).toMatch(/authToken=/); 
+    expect(setCookieHeader[0]).toMatch(/authToken=/);
     expect(setCookieHeader[0]).toMatch(/HttpOnly/);
-    expect(setCookieHeader[0]).toMatch(/Secure/); 
+    expect(setCookieHeader[0]).toMatch(/Secure/);
 
-    await deleteUserFromDB(email1)
+    await deleteUserFromDB(email1);
   });
 
   describe('error, missing a field', () => {
@@ -78,6 +79,90 @@ describe('POST /v1/user/register route', () => {
     });
   });
 
+  test('invalid email error', async () => {
+    const res = await registerUserRequest('example', password, nameFirst, nameLast);
+    const body = res.body;
+
+    expect(res.statusCode).toBe(400);
+    expect(body).toHaveProperty('error', 'Invalid email');
+  });
+
+  describe('password errors', () => {
+    test('password too short', async () => {
+      const res = await registerUserRequest('pw@example.com', 'Pw1!', nameFirst, nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Password is too short');
+    });
+
+    test("password doesn't contain capital letter", async () => {
+      const res = await registerUserRequest('pw@example.com', 'password1!', nameFirst, nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Password requires an uppercase character');
+    });
+
+    test("password doesn't contain lowercase letter", async () => {
+      const res = await registerUserRequest('pw@example.com', 'PASSWORD1!', nameFirst, nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Password requires a lowercase character');
+    });
+
+    test("password doesn't have a number", async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password!', nameFirst, nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Password requires a number');
+    });
+
+    test("password doesn't have a special character", async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password12', nameFirst, nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Password requires a special character');
+    });
+  });
+
+  describe('name errors', () => {
+    test('first name contains special character', async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password1!', '!@#$%^&*', nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Invalid character in name');
+    });
+
+    test('last name contains special character', async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password1!', nameFirst, '!@#$%^&*');
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Invalid character in name');
+    });
+
+    test('first name contains number', async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password1!', '12345', nameLast);
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Invalid character in name');
+    });
+
+    test('last name contains number', async () => {
+      const res = await registerUserRequest('pw@example.com', 'Password1!', nameFirst, '12345');
+      const body = res.body;
+
+      expect(res.statusCode).toBe(400);
+      expect(body).toHaveProperty('error', 'Invalid character in name');
+    });
+  });
+
   describe('error, user already exists', () => {
     test('existing user', async () => {
       const email2 = 'test5@example.com'; // Define the email variable
@@ -89,20 +174,20 @@ describe('POST /v1/user/register route', () => {
 
       expect(res.statusCode).toBe(400);
       expect(body).toHaveProperty('error', 'User already exists');
-      await deleteUserFromDB(email2)
+      await deleteUserFromDB(email2);
     });
   });
 });
 
 describe('POST /v1/user/login route', () => {
-  // register user for each test 
-  const email = 'guy@example.com'
+  // register user for each test
+  const email = 'guy@example.com';
   beforeEach(async () => {
     await registerUserRequest(email, password, nameFirst, nameLast);
   });
 
   afterEach(async () => {
-    await deleteUserFromDB(email)
+    await deleteUserFromDB(email);
   });
 
   test('success, logs in and returns 200 and token', async () => {
@@ -115,9 +200,9 @@ describe('POST /v1/user/login route', () => {
     // verify the Set-Cookie header
     const setCookieHeader = res.headers['set-cookie'];
     expect(setCookieHeader).toBeDefined();
-    expect(setCookieHeader[0]).toMatch(/authToken=/); 
+    expect(setCookieHeader[0]).toMatch(/authToken=/);
     expect(setCookieHeader[0]).toMatch(/HttpOnly/);
-    expect(setCookieHeader[0]).toMatch(/Secure/); 
+    expect(setCookieHeader[0]).toMatch(/Secure/);
   });
 
   describe('error, missing a field', () => {
@@ -157,29 +242,29 @@ describe('POST /v1/user/login route', () => {
 
 describe('POST /v1/user/logout route', () => {
   let token;
-  const email = 'logout@example.com'
+  const email = 'logout@example.com';
 
   beforeEach(async () => {
     await deleteUserFromDB(email); // Ensures the user is removed before registering
     const res = await registerUserRequest(email, password, nameFirst, nameLast);
     token = res.body.token;
   });
-  
+
   afterEach(async () => {
-    await deleteUserFromDB(email)
+    await deleteUserFromDB(email);
   });
 
   test('success, logs out and returns 200', async () => {
-    const res = await logoutUserRequest(token); 
+    const res = await logoutUserRequest(token);
     const body = res.body.trim();
 
     expect(res.statusCode).toBe(200);
     expect(body).toBe('');
     const setCookieHeader = res.headers['set-cookie'];
     // verify the cookie is cleared
-    expect(setCookieHeader).toBeDefined(); 
-    expect(setCookieHeader[0]).toMatch(/authToken=;/); 
-    expect(setCookieHeader[0]).toMatch(/Expires=/); 
+    expect(setCookieHeader).toBeDefined();
+    expect(setCookieHeader[0]).toMatch(/authToken=;/);
+    expect(setCookieHeader[0]).toMatch(/Expires=/);
   });
 
   test('error, invalid token', async () => {
@@ -189,15 +274,15 @@ describe('POST /v1/user/logout route', () => {
     expect(res.statusCode).toBe(401);
     expect(body).toHaveProperty('error', 'Invalid token');
     expect(typeof body.error).toBe('string');
-     // check header is undefined
+    // check header is undefined
     const setCookieHeader = res.headers['set-cookie'];
     expect(setCookieHeader).toBeUndefined();
   });
 });
 
-describe('GET /v1/user/details', () => { 
+describe('GET /v1/user/details', () => {
   let token;
-  const email = 'getDetails@example.com'
+  const email = 'getDetails@example.com';
 
   beforeEach(async () => {
     await deleteUserFromDB(email); // Ensures the user is removed before registering
@@ -214,14 +299,47 @@ describe('GET /v1/user/details', () => {
     const body = res.body;
 
     expect(res.statusCode).toBe(200);
-    expect(body).toStrictEqual({email: 'getDetails@example.com', nameFirst, nameLast});
+    expect(body).toStrictEqual({ email: 'getDetails@example.com', nameFirst, nameLast });
   });
 
   test('Invalid token, return 401', async () => {
     const res = await getUserDetailsRequest('InvalidTokenGiven');
-  
+
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty('error', 'Invalid token');
+    expect(typeof res.body.error).toBe('string');
+  });
+});
+
+describe('POST /v1/user/forgot', () => {
+  const email = 'code_crusaders@outlook.com';
+
+  beforeEach(async () => {
+    await deleteUserFromDB(email); // Ensures the user is removed before registering
+    await registerUserRequest(email, password, nameFirst, nameLast);
+  });
+
+  afterEach(async () => {
+    await deleteUserFromDB(email);
+  });
+
+  // The sending of the reset code via email has been manually checked. Furthermore, if the email
+  // failed to be sent, it would return a 500 HTTP Status code.
+  test('Successfully sends reset code to user\'s email and returns 200', async () => {
+    const res = await sendUserResetCodeRequest(email);
+    const body = res.body;
+
+    expect(res.statusCode).toBe(200);
+    expect(body).toHaveProperty('resetCode');
+    expect(body.resetCode).toHaveLength(8);
+    expect(typeof body.resetCode).toBe('string');
+  }, 10000);
+
+  test('Invalid email, return 401', async () => {
+    const res = await sendUserResetCodeRequest('InvalidEmailGive@example.com');
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toHaveProperty('error');
     expect(typeof res.body.error).toBe('string');
   });
 });

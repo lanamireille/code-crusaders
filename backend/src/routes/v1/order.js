@@ -1,13 +1,18 @@
-import express, { json } from 'express';
+import express from 'express';
 import authMiddleware from '../../middleware/authMiddleware.js';
-import { orderFormCreate, orderFormUpdate, isOrderIdValid } from '../../controllers/orderController.js';
+import { orderFormCreate, orderFormUpdate, isOrderIdValid, getOrderFromOrderId, orderDelete } from '../../controllers/orderController.js';
 import orderSchema from '../../schemas/orderSchema.js';
+import multer from 'multer';
+import { validateCSV } from './helpers.js';
+
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // !!! this file is just for parsing the request and sending a response (see the first route for an example). the actual logic should be implemented in controllers. !!! //
 
 // *************** CREATE ORDERS *************** //
 
+// POST /v1/order/create/form
 router.post('/create/form', authMiddleware, async (req, res) => {
   try {
     // validate request body
@@ -23,7 +28,7 @@ router.post('/create/form', authMiddleware, async (req, res) => {
     // send response
     res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -34,7 +39,7 @@ router.post('/create/bulk', authMiddleware, async (req, res) => {
     if (!Array.isArray(orders)) {
       return res.status(400).json({ error: 'Invalid orderList given' });
     } else {
-      let orderIds = [];
+      const orderIds = [];
       for (const order of orders) {
         const { error } = orderSchema.validate(order);
         if (error) {
@@ -47,14 +52,26 @@ router.post('/create/bulk', authMiddleware, async (req, res) => {
       return res.status(200).json({ orderIds });
     }
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-// POST /v1/order/create/pdf
-router.post('/create/pdf', authMiddleware, (req, res) => {
-  // replace the following with actual logic
-  res.json({ message: 'Order PDF uploaded successfully' });
+// POST /v1/order/create/csv
+router.post('/create/csv', upload.single('file'), authMiddleware, async (req, res) => {
+  try {
+    const jsonData = JSON.parse(req.body.json);
+    const csvContent = req.file.buffer.toString('utf-8');
+
+    const validation = validateCSV(csvContent);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const response = await orderFormCreate(jsonData, csvContent);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // **************** SEND ORDERS **************** //
@@ -73,7 +90,7 @@ router.get('/sent/list', authMiddleware, (req, res) => {
 
 // DELETE /v1/order/sent/{orderId}
 router.delete('/sent/:orderId', authMiddleware, (req, res) => {
-  const { orderId } = req.params;
+  // const { orderId } = req.params;
 
   // replace the following with actual logic
   res.json({ message: 'Sent order deleted successfully' });
@@ -89,7 +106,7 @@ router.get('/received/list', authMiddleware, (req, res) => {
 
 // DELETE /v1/order/received/{orderId}
 router.delete('/received/:orderId', authMiddleware, (req, res) => {
-  const { orderId } = req.params;
+  // const { orderId } = req.params;
 
   // replace the following with actual logic
   res.json({ message: 'Received order deleted successfully' });
@@ -104,11 +121,19 @@ router.get('/list', authMiddleware, (req, res) => {
 });
 
 // GET /v1/order/{orderId}
-router.get('/:orderId', authMiddleware, (req, res) => {
+router.get('/:orderId', authMiddleware, async (req, res) => {
   const { orderId } = req.params;
-
-  // replace the following with actual logic
-  res.json({ message: `Order details for ${orderId} fetched successfully` });
+  try {
+    if (!orderId || !(await isOrderIdValid(orderId))) {
+      return res.status(400).json({ error: 'Invalid orderId given' });
+    } else {
+      const xmlResponse = await getOrderFromOrderId(orderId);
+      res.setHeader('Content-Type', 'application/xml');
+      return res.status(200).send(xmlResponse);
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // GET /v1/order/{orderId}/pdf
@@ -123,7 +148,7 @@ router.get('/:orderId/pdf', authMiddleware, (req, res) => {
 
 // PUT /v1/order/{orderId}
 router.put('/:orderId', authMiddleware, async (req, res) => {
-  const  orderId  = parseInt(req.params.orderId);
+  const orderId = parseInt(req.params.orderId);
 
   try {
     // validate request body and order id
@@ -133,7 +158,7 @@ router.put('/:orderId', authMiddleware, async (req, res) => {
     }
     const isValid = await isOrderIdValid(orderId);
     if (!isValid) {
-      return res.status(400).json({ error: `Invalid orderId given` });
+      return res.status(400).json({ error: 'Invalid orderId given' });
     }
 
     // get response from controller
@@ -142,16 +167,25 @@ router.put('/:orderId', authMiddleware, async (req, res) => {
     // send response
     res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 // DELETE /v1/order/{orderId}
-router.delete('/:orderId', authMiddleware, (req, res) => {
+router.delete('/:orderId', authMiddleware, async (req, res) => {
   const { orderId } = req.params;
 
-  // replace the following with actual logic
-  res.json({ message: 'Order deleted successfully' });
+  try {
+    const isValid = await isOrderIdValid(orderId);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid orderId given' });
+    }
+
+    const response = await orderDelete(orderId);
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 export default router;

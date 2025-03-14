@@ -140,4 +140,4 @@ const orderSchema = Joi.object({
   })).optional()
 });
 
-export default orderSchema; 
+export default orderSchema;
