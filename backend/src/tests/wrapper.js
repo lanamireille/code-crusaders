@@ -113,4 +113,4 @@ export const sendUserResetCodeRequest = async (email) =>
   requestHelper('POST', '/v1/user/forgot', { email });
 
 export const getUserStatisticsRequest = async (token) =>
-  requestHelper('GET', 'v1/user/statistics', {}, token);
+  requestHelper('GET', '/v1/user/statistics', {}, token);

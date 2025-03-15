@@ -117,12 +117,17 @@ router.put('/details', authMiddleware, (req, res) => {
 
 // GET /v1/user/statistics
 router.get('/statistics', authMiddleware, async (req, res) => {
-  console.log(`Request received with email ${req.user.email}`);
+  console.log('AHHHHHDFHADKFHAO;I HFUWEHFUWHEFIUWNROFHOIFHRWEOF');
   try {
     const email = req.user.email;
     const statistics = await getUserStatistics(email);
     res.status(200).json(statistics);
   } catch (error) {
+    console.error('IS THIS IN THE LOGIC ERROR?????????????????', {
+      message: error.message,
+      stack: error.stack,
+      error,
+    });
     res.status(error.status || 500).json({ message: error.message });
   }
 });

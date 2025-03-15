@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1741958318475" clover="3.2.0">
-  <project timestamp="1741958318475" name="All files">
-    <metrics statements="61" coveredstatements="60" conditionals="27" coveredconditionals="24" methods="15" coveredmethods="15" elements="103" coveredelements="99" complexity="0" loc="61" ncloc="61" packages="3" files="3" classes="3"/>
+<coverage generated="1741959503053" clover="3.2.0">
+  <project timestamp="1741959503053" name="All files">
+    <metrics statements="61" coveredstatements="60" conditionals="27" coveredconditionals="21" methods="15" coveredmethods="15" elements="103" coveredelements="96" complexity="0" loc="61" ncloc="61" packages="3" files="3" classes="3"/>
     <package name="config">
       <metrics statements="4" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
       <file name="db.js" path="/Users/jaysung/code-crusaders/backend/src/config/db.js">
@@ -32,9 +32,9 @@
       </file>
     </package>
     <package name="tests">
-      <metrics statements="44" coveredstatements="43" conditionals="21" coveredconditionals="18" methods="14" coveredmethods="14"/>
+      <metrics statements="44" coveredstatements="43" conditionals="21" coveredconditionals="15" methods="14" coveredmethods="14"/>
       <file name="wrapper.js" path="/Users/jaysung/code-crusaders/backend/src/tests/wrapper.js">
-        <metrics statements="44" coveredstatements="43" conditionals="21" coveredconditionals="18" methods="14" coveredmethods="14"/>
+        <metrics statements="44" coveredstatements="43" conditionals="21" coveredconditionals="15" methods="14" coveredmethods="14"/>
         <line num="8" count="2" type="stmt"/>
         <line num="9" count="2" type="stmt"/>
         <line num="10" count="2" type="stmt"/>

@@ -396,7 +396,7 @@ export const getUserStatistics = async (email) => {
     // Fetch all orders for the user
     const { data: orders, error: ordersError } = await supabase
       .from('registeredOrder')
-      .select('orderId, cost, order_date')
+      .select('orderId, cost, order_date') // There is no area for order_date yet
       .eq('creator', email);
 
     if (!orders || ordersError) {
@@ -460,7 +460,7 @@ export const getUserStatistics = async (email) => {
     const numOrdersMonthly = new Array(12).fill(0);
     const currentDate = new Date();
     orders.forEach((order) => {
-      const orderDate = new Date(order.order_date);
+      const orderDate = new Date(order.order_date); // There is no order_date yet
       const monthDiff = (currentDate.getFullYear() - orderDate.getFullYear()) * 12 + (currentDate.getMonth() - orderDate.getMonth());
       if (monthDiff >= 0 && monthDiff < 12) {
         numOrdersMonthly[11 - monthDiff]++;
@@ -475,7 +475,7 @@ export const getUserStatistics = async (email) => {
     const currentYear = currentDate.getFullYear();
     const totalAmountMonth = orders
       .filter((order) => {
-        const orderDate = new Date(order.order_date);
+        const orderDate = new Date(order.order_date); // There is no order_date yet
         return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
       })
       .reduce((total, order) => total + (order.cost || 0), 0);
